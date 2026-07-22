@@ -14,3 +14,37 @@ This project addresses that challenge by analyzing sales transactions to answer 
 - Which payment methods and shipment providers are most preferred?
 - What factors are associated with product returns and negative transactions?
 - What operational insights can support better business decisions?
+
+# Objectives
+This project aims to:
+
+- Clean and prepare a retail sales dataset using PostgreSQL.
+- Perform exploratory SQL analysis across multiple business dimensions.
+- Measure sales performance, customer purchasing behavior, and product performance.
+- Evaluate the effectiveness of discounts and payment methods.
+- Analyze product return patterns and logistics performance.
+- Investigate factors associated with negative transactions.
+- Product executive-level business insights based on SQL analysis.
+
+# Tools Used
+- Microsoft Excel (Initial Inspection)
+- pgAdmin 4
+- PostgreSQL
+- SQL
+- GitHub
+
+# Dataset
+- Source: Kaggle
+- Link: https://www.kaggle.com/datasets/yusufdelikkaya/online-sales-dataset
+- Records: 49,782 transactions
+- Industry: Retail / E-commerce 
+- Data includes:
+  - Products
+  - Categories
+  - Sales Channels (In-Store & Online)
+  - Countries
+  - Payment Methods
+  - Discounts
+  - Shipment Providers
+  - Warehouse Locations
+  - Returns
