@@ -115,7 +115,7 @@ This project aims to:
   - Logistics and Operations Analysis
   - Negatives Transaction Analysis
   
-  # Executive Insights
+# Executive Insights
 - **Revenue is primarily driven by sales volume rather than product pricing.** Categories with more product lines, particularly **Furniture** and **Electronics**, consistently generated the highest transaction volume and revenue.
 
 - **Customer purchasing behavior is broadly distributed.** Product demand, sales channel preferences, payment methods, shipment providers, and warehouse usage showed relatively balanced patterns, indicating no single option strongly dominates customer behavior.
@@ -128,7 +128,7 @@ This project aims to:
 
 - **Overall, the business demonstrates balanced operational performance.** Sales, logistics, customer behavior, and product demand remain consistently distributed across multiple business dimensions, suggesting that future optimization efforts may be more effective when focused on pricing strategies, discount policies, customer segmentation, and product assortment rather than large-scale operational changes.
 
-  # SQL Preview
+# SQL Preview
 One of the analytical queries from this project combines multiple Common Table Expressions (CTEs), window functions, and ranking logic to evaluate warehouse performance across several business metrics.
 
 ```sql
@@ -182,7 +182,7 @@ INNER JOIN quantity q
 INNER JOIN revenue r
     ON t.warehouselocation = r.warehouselocation;
 ```
-  # SQL Skills Demonstrated
+# SQL Skills Demonstrated
 - CTEs
 - Window Functions
 - CASE Statements
@@ -196,7 +196,7 @@ INNER JOIN revenue r
 - Return Rate Analysis
 - Customer Segmentation
     
-  # Future Improvements
+# Future Improvements
 - Build an interactive Power BI dashboard
 - Perform customer segmentation using RFM Analysis
 - Develop sales forecasting models using Python
