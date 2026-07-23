@@ -103,6 +103,11 @@ This project aims to:
   │
   ├── README.md
   ```
+# Project Development Snapshot
+This project involved data cleaning, SQL query development, business analysis, and documentation over several months. The screenshot below shows part of my actual working environment while developing the project.
+
+![Project Workspace](images/Project Development Snapshot.png)
+
 # SQL Preview
 One of the analytical queries from this project combines multiple Common Table Expressions (CTEs), window functions, and ranking logic to evaluate warehouse performance across several business metrics.
 
