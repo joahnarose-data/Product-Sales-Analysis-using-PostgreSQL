@@ -1,0 +1,274 @@
+
+-- =====================================================================
+--                  SQL PROJECT 1: PRODUCT SALES ANALYSIS
+--                    SECTION 1: DATA QUALITY ASSESSMENT
+-- =====================================================================
+
+/* PRE-ANALYSIS OVERVIEW:
+This file conducts a comprehensive data quality audit on the raw dataset. 
+Initial visual inspection indicated structural anomalies, missing tracking IDs, 
+and negative values. This systematic assessment guarantees the foundation of the 
+data cleaning pipeline is accurate.
+
+DATASET PROFILE:
+Source: Kaggle (https://www.kaggle.com/datasets/yusufdelikkaya/online-sales-dataset)
+Total Columns: 17 (InvoiceNo, StockCode, Description, Quantity, InvoiceDate, UnitPrice, 
+               CustomerID, Country, Discount, PaymentMethod, ShippingCost, Category, 
+               SalesChannel, ReturnStatus, ShipmentProvider, WarehouseLocation, OrderPriority)
+Context: Multi-channel retail ledger (Omnichannel: Online and In-Store) spanning multiple regions.
+*/
+
+-- ====================================================================
+-- RECORD PROFILE & VOLUME AUDITS
+-- ====================================================================
+
+-- Q1: How many total records exist?
+
+SELECT COUNT(*) AS total_raw_records
+FROM product_sales_raw;
+
+-- RESULT: 49,782
+-- AUDIT NOTE: Baseline volume established.
+
+-- Q2: How many duplicate records exist?
+
+SELECT *,
+COUNT(*)
+FROM product_sales_raw
+GROUP BY
+invoiceno,
+stockcode,
+description,
+quantity,
+invoicedate,
+unitprice,
+customerid,
+country,
+discount,
+paymentmethod,
+shippingcost,
+category,
+saleschannel,
+returnstatus,
+shipmentprovider,
+warehouselocation,
+orderpriority
+HAVING COUNT(*) > 1;
+
+-- RESULT: 0 rows returned.
+-- AUDIT NOTE: No exact row duplicates exist across operational business keys. 
+-- Every row represents unique occurences.
+
+-- ====================================================================
+-- MISSING VALUES (NULL) ANALYSIS
+-- ====================================================================
+
+-- Q3: How many total rows contain at least one missing value?
+
+SELECT 
+   COUNT(*) AS rows_with_missing_values,
+   ROUND(COUNT(*) * 100.0 /
+   (SELECT COUNT(*) FROM product_sales_raw),2) AS missing_percentage
+FROM product_sales_raw
+WHERE invoiceno IS NULL OR stockcode IS NULL OR description IS NULL OR quantity IS NULL 
+   OR invoicedate IS NULL OR unitprice IS NULL OR customerid IS NULL OR country IS NULL 
+   OR discount IS NULL OR paymentmethod IS NULL OR shippingcost IS NULL OR category IS NULL 
+   OR saleschannel IS NULL OR returnstatus IS NULL OR shipmentprovider IS NULL 
+   OR warehouselocation IS NULL OR orderpriority IS NULL;
+
+-- RESULT: 4,978 rows.
+-- AUDIT NOTE: Exactly 10% of the entire dataset contains missing metric value. 
+
+
+-- Q4: Which specific columns contain missing values?
+
+SELECT 
+    SUM(CASE WHEN customerid IS NULL THEN 1 ELSE 0 END) AS customerid_nulls,
+    SUM(CASE WHEN shippingcost IS NULL THEN 1 ELSE 0 END) AS shippingcost_nulls,
+    SUM(CASE WHEN warehouselocation IS NULL THEN 1 ELSE 0 END) AS warehouselocation_nulls
+FROM product_sales_raw;
+
+-- RESULT: 
+-- CustomerId: 4,978 nulls
+-- ShippingCost: 2,489 nulls
+-- WarehouseLocation: 3,485 nulls
+-- AUDIT NOTE: All remaining 14 columns possess zero missing values (100% complete).
+
+-- ====================================================================
+-- VALUE DIRECTION & BALANCE AUDITS (NEGATIVES)
+-- ====================================================================
+
+-- Q5: How many rows contain negative values?
+
+SELECT 
+   COUNT(*) AS rows_with_negative_values,
+   ROUND(COUNT(*) * 100.0 /
+   (SELECT COUNT(*) FROM product_sales_raw),2) AS negativevalues_percentage
+FROM product_sales_raw
+WHERE CAST(quantity AS INTEGER) < 0
+   OR CAST(unitprice AS DECIMAL(10,2)) < 0
+   OR CAST(discount AS DECIMAL(10,2)) < 0
+   OR CAST(shippingcost AS DECIMAL(10,2)) < 0;
+
+-- RESULT: 2,489 rows.
+-- AUDIT NOTE: 5% of the dataset contains negative numeric values.
+
+-- Q6: Which numeric columns contain negative values?
+
+SELECT 
+    SUM(CASE WHEN CAST(quantity AS INTEGER) < 0 THEN 1 ELSE 0 END) AS negative_quantity_count,
+    SUM(CASE WHEN CAST(unitprice AS DECIMAL(10,2)) < 0 THEN 1 ELSE 0 END) AS negative_unitprice_count,
+    SUM(CASE WHEN CAST(discount AS DECIMAL(10,2)) < 0 THEN 1 ELSE 0 END) AS negative_discount_count,
+    SUM(CASE WHEN CAST(shippingcost AS DECIMAL(10,2)) < 0 THEN 1 ELSE 0 END) AS negative_shippingcost_count
+FROM product_sales_raw;
+
+-- RESULT: 
+-- Quantity: 2,489 rows below zero.
+-- UnitPrice: 1,493 rows below zero.
+-- Discount / ShippingCost: 0 rows below zero.
+
+-- Q7: Cross-analyze negative rows against missing fields.
+
+SELECT 
+    invoiceno,
+    description,
+    quantity,
+    unitprice,
+    customerid,
+    shippingcost,
+    warehouselocation
+FROM product_sales_raw
+WHERE CAST(quantity AS INTEGER) < 0 
+   OR CAST(unitprice AS NUMERIC(10,2)) < 0;
+
+-- RESULT: 2,489 rows returned.
+-- AUDIT NOTE: 100% of rows containing negative signs correlate perfectly with missing 
+-- CustomerId, ShippingCost, and WarehouseLocation metrics. These records represent potential
+-- cancellation, refund, or adjustment records. Additonal business documentation is required
+-- for confirmation.
+
+-- ====================================================================
+-- CATEGORICAL INTEGRITY AUDITS
+-- ====================================================================
+
+-- Q8: Are category assignments standardized and clean?
+
+SELECT 
+    description, 
+    COUNT(DISTINCT category) AS category_count,
+    STRING_AGG(DISTINCT category, ', ') AS associated_categories
+FROM product_sales_raw
+GROUP BY description
+HAVING COUNT(DISTINCT category) > 1;
+
+-- RESULT: 11 active core product descriptions map to multiple conflicting categories 
+-- (e.g., 'Wireless Mouse' mapping across 'Accessories', 'Apparel', 'Electronics', 'Furniture',
+-- and 'Stationery'.)
+-- AUDIT NOTE: Severe categorical misclassification detected. Products suffer from system 
+-- data entry variations. Category column requires programmatic normalization during cleaning 
+-- phase.
+
+-- ====================================================================
+-- TYPE & STRUCTURAL INTEGRITY AUDITS
+-- ====================================================================
+
+-- Q9: Are date fields structurally ready for conversion?
+
+SELECT
+COUNT(*)
+FROM product_sales_raw
+WHERE invoicedate !~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}';
+
+-- RESULT: Date patterns are valid and consistent. They can be safely recast to 
+-- TIMESTAMP data types.
+
+-- Q10: Inspect physical database schema types
+
+SELECT 
+    COLUMN_NAME, 
+    DATA_TYPE, 
+    CHARACTER_MAXIMUM_LENGTH, 
+    NUMERIC_PRECISION, 
+    IS_NULLABLE
+FROM 
+    INFORMATION_SCHEMA.COLUMNS
+WHERE 
+    TABLE_NAME = 'product_sales_raw';
+
+-- RESULT: All columns are defined as unrestricted, nullable TEXT objects.
+-- AUDIT NOTE: Table exhibits "Blind Text Ingestion". Schema mapping must be completely modified 
+-- in the next phase to map metrics to explicit data types (INT, DECIMAL, TIMESTAMP, VARCHAR).
+
+-- Q11: Identify spelling inconsistencies.
+
+SELECT 'saleschannel' AS column_name,
+    STRING_AGG(DISTINCT saleschannel, ', ') AS associated_categories
+FROM product_sales_raw
+UNION ALL 
+SELECT 'paymentmethod',
+    STRING_AGG(DISTINCT paymentmethod, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'returnstatus',
+    STRING_AGG(DISTINCT returnstatus, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'orderpriority',
+    STRING_AGG(DISTINCT orderpriority, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'shipmentprovider',
+    STRING_AGG(DISTINCT shipmentprovider, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'country',
+    STRING_AGG(DISTINCT country, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'warehouselocation',
+    STRING_AGG(DISTINCT warehouselocation, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'description',
+    STRING_AGG(DISTINCT description, ', ')
+FROM product_sales_raw
+UNION ALL
+SELECT 'category',
+    STRING_AGG(DISTINCT category, ', ')
+FROM product_sales_raw;
+
+/*
+Sales Channel - In-store, Online
+Category - Accessories, Apparel, Electronics, Furniture, Stationery
+Description - Backpack, Blue Pen, Desk Lamp, Headphones, Notebook, Office Chair, 
+              T-shirt, USB Cable, Wall Clock, White Mug, Wireless Mouse
+Warehouse Location - Amsterdam, Berlin, London, Paris, Rome
+Payment Method - Bank Transfer, Credit Card, paypall
+Shipment Provider - DHL, FedEx, Royal Mail, UPS
+Return Status - Not Returned, Returned
+Order Priority - High, Low, Medium
+Country - Australia, Belgium, France, Germany, Italy, Netherlands, Norway, 
+          Portugal, Spain, Sweden, United Kingdom, United States
+*/
+
+
+-- ====================================================================
+-- FINAL ASSIGNMENT SUMMARY & ACTION PLAN
+-- ====================================================================
+
+/*
+DATA QUALITY REPORT SUMMARY:
+1. Missing Values: Found on 4,978 entries across CustomerID, ShippingCost, and WarehouseLocation. 
+   Dropping these would result in an unacceptable 10% data volume loss. They must be preserved with string 
+   placeholders ('Unknown', 'Unspecified') or numerical structural defaults (0.00).
+
+2. Negative Numbers: Found on 2,489 records. These indicate potential cancellation, refund, or adjustment records. 
+   They must remain in the table to support accurate net profit reporting but must be explicitly flagged to prevent 
+   distortion during behavioral customer metric grouping.
+
+3. Logical Errors: Severe product categorization misalignment detected. Standard cross-walk updating is 
+   mandatory to correct category assignments.
+
+4. Schema Architecture: The table lacks numeric structure and primary/foreign constraint rules. It must be 
+   recast from global 'TEXT' properties to optimized operational variables.
+*/

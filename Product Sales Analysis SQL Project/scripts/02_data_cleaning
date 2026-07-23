@@ -1,0 +1,239 @@
+
+-- =====================================================================
+--                  SQL PROJECT 1: PRODUCT SALES ANALYSIS
+--                       SECTION 2: DATA CLEANING
+-- =====================================================================
+
+/* 
+OBJECTIVE:
+
+Transform raw operational sales data
+into an analysis-ready dataset by:
+
+1. Standardizing formats
+2. Handling missing values
+3. Preserving important business events
+4. Correcting category inconsistencies
+5. Applying appropriate data types
+6. Validating final outputs
+*/
+
+-- ====================================================================
+-- 1. Ensure execution repeatability without colliding existing assets
+-- ====================================================================
+
+DROP TABLE IF EXISTS product_sales_clean;
+
+-- ====================================================================
+-- 2. Create rollback backup of the raw dataset
+-- ====================================================================
+
+DROP TABLE IF EXISTS product_sales_raw_backup;
+
+CREATE TABLE product_sales_raw_backup AS
+SELECT *
+FROM product_sales_raw;
+
+-- ====================================================================
+-- 3. Establish the isolated, strongly typed database clean layer
+-- ====================================================================
+
+CREATE TABLE product_sales_clean AS 
+SELECT 
+    -- a. Fix structural string identifiers by extracting extra spaces
+    TRIM(invoiceno) AS invoiceno,
+    TRIM(stockcode) AS stockcode,
+    TRIM(description) AS description,
+    TRIM(shipmentprovider) AS shipmentprovider,
+    
+    -- b. Standardize categorical fields to proper Title Case line-by-line
+    INITCAP(TRIM(category)) AS category,
+    INITCAP(TRIM(country)) AS country,
+    INITCAP(TRIM(paymentmethod)) AS paymentmethod,
+    INITCAP(TRIM(saleschannel)) AS saleschannel,
+    INITCAP(TRIM(returnstatus)) AS returnstatus,
+    INITCAP(TRIM(orderpriority)) AS orderpriority,
+
+    -- c. Transition numeric fields from unoptimized text strings to explicit types
+    CAST(quantity AS INTEGER) AS quantity,
+    CAST(unitprice AS NUMERIC(10,2)) AS unitprice,
+    CAST(discount AS NUMERIC(5,2)) AS discount,
+    
+    -- d. Cast textual calendar strings 
+    TO_TIMESTAMP(invoicedate, 'DD/MM/YYYY HH24:MI') AS invoicedate,
+
+    -- e. Impute empty spaces and NULL flags with structural default mappings
+    COALESCE(NULLIF(TRIM(customerid), ''), 'Unknown') AS customerid,
+    COALESCE(CAST(shippingcost AS NUMERIC(10,2)), 0.00) AS shippingcost,
+    COALESCE(NULLIF(INITCAP(TRIM(warehouselocation)), ''), 'Unspecified') AS warehouselocation,
+
+    -- f. Integrate cancellation framework directly as a transaction status column
+    CASE 
+        WHEN CAST(quantity AS INTEGER) < 0 THEN 'Negative Transaction'
+        ELSE 'Positive Transaction'
+    END AS transaction_status
+
+FROM product_sales_raw;
+
+-- ====================================================================
+-- 4. Impose primary tracking column integrity constraints
+-- ====================================================================
+
+ALTER TABLE product_sales_clean ALTER COLUMN invoiceno SET NOT NULL;
+ALTER TABLE product_sales_clean ALTER COLUMN stockcode SET NOT NULL;
+
+-- ====================================================================
+-- 5. Update product description categories
+-- ====================================================================
+
+ALTER TABLE product_sales_clean ADD COLUMN category_original TEXT;
+
+UPDATE product_sales_clean
+SET category_original = category;
+
+-- 1. Map Accessories
+UPDATE product_sales_clean
+SET category = 'Accessories'
+WHERE description IN ('Backpack', 'White Mug');
+
+-- 2. Map Stationery
+UPDATE product_sales_clean
+SET category = 'Stationery'
+WHERE description IN ('Blue Pen', 'Notebook');
+
+-- 3. Map Furniture
+UPDATE product_sales_clean
+SET category = 'Furniture'
+WHERE description IN ('Desk Lamp', 'Office Chair', 'Wall Clock');
+
+-- 4. Map Electronics
+UPDATE product_sales_clean
+SET category = 'Electronics'
+WHERE description IN ('Headphones', 'USB Cable', 'Wireless Mouse');
+
+-- 5. Map Apparel
+UPDATE product_sales_clean
+SET category = 'Apparel'
+WHERE description IN ('T-shirt');
+
+-- ==========================================================================
+-- 6. Update project folder through SQL Shell (psql) & Export Clean Dataset
+-- ==========================================================================
+
+/* \copy product_sales_clean TO 'C:/Users/HP/Product Sales Analysis SQL Project/data/product_sales_clean.csv' 
+DELIMITER ',' CSV HEADER; */
+
+-- ====================================================================
+-- POST- CLEANING VALIDATION CHECKS
+-- ====================================================================
+
+-- Validation 1: Verify row count preserved
+SELECT COUNT(*)
+FROM product_sales_clean;
+
+-- Validation 2: Verify no null Customer IDs remain
+SELECT COUNT(*)
+FROM product_sales_clean
+WHERE customerid IS NULL;
+
+-- Validation 3: Verify no null InvoiceNo remain
+SELECT COUNT(*)
+FROM product_sales_clean
+WHERE invoiceno IS NULL;
+
+-- Validation 4: Verify no null InvoiceDate
+SELECT COUNT(*)
+FROM product_sales_clean
+WHERE invoicedate IS NULL;
+
+-- Validation 5: Verify no null StockCode
+SELECT COUNT(*)
+FROM product_sales_clean
+WHERE stockcode IS NULL;
+
+-- Validation 6: Verify no null categories remain
+SELECT COUNT(*)
+FROM product_sales_clean
+WHERE category IS NULL;
+
+-- Validation 7: Verify category standardization
+SELECT category,
+       description,
+COUNT(*)
+FROM product_sales_clean
+GROUP BY category, description;
+
+-- Validation 8: Verify no multiple category count per product description
+SELECT
+description,
+COUNT(DISTINCT category)
+FROM product_sales_clean
+GROUP BY description
+HAVING COUNT(DISTINCT category) > 1;
+
+
+-- Validation 9: Verify physical database schema types
+SELECT 
+    COLUMN_NAME, 
+    DATA_TYPE, 
+    CHARACTER_MAXIMUM_LENGTH, 
+    NUMERIC_PRECISION, 
+    IS_NULLABLE
+FROM 
+    INFORMATION_SCHEMA.COLUMNS
+WHERE 
+    TABLE_NAME = 'product_sales_clean';
+
+
+/*
+DATA CLEANING REPORT SUMMARY:
+
+1. Missing Values: Preserved 4,978 entries across CustomerID, ShippingCost, and WarehouseLocation.
+Filled columns containing missing values with:
+CustomerID - 'Unknown'
+ShippingCost - 0.00 
+             - Missing shipping costs likely represent transactions without recorded logistics charges.
+             - Imputed as 0.00 to preserve records and prevent aggregation failures.
+WarehouseLocation - 'Unspecified'
+
+2. Negative Numbers: Retained 2,489 rows containing negative values as it carries valuable information
+on possible purchase cancellations, refund, product defects, adjustments, or other reversal activities. 
+Rows with these type were flagged as 'Negative Transaction'.
+
+3. Category Integrity Audit :
+
+Query:
+    SELECT
+        description
+    FROM product_sales_clean
+    GROUP BY 
+        description;
+
+Eleven product descriptions were associated with multiple conflicting categories.
+These descriptions were standardized to a single category based on product function.
+
+Product Descriptions:
+Notebook - Stationery
+Office Chair - Furniture
+White Mug - Accessories
+Desk Lamp - Furniture
+Wireless Mouse - Electronics
+USB Cable - Electronics
+Wall Clock - Furniture
+Headphones - Electronics
+Blue Pen - Stationery
+Backpack -  Accessories
+T-shirt - Apparel
+
+New product counts per category (Total:49,782): 
+Accessories - 9086
+Stationery - 8963
+Furniture - 13,684
+Electronics - 13,583
+Apparel - 4,466
+
+4. Schema Architecture: Recasted 'TEXT' properties to optimized operational variables.
+
+5. Formatting: Fixed text formatting and trimmed extra spaces.
+
+*/
