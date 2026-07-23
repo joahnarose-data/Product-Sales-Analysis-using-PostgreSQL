@@ -31,7 +31,7 @@ This project aims to:
 - **pgAdmin 4** — Database administration and project setup
 - **PostgreSQL** — SQL querying and data analysis
 - **SQL** — Data cleaning, validation, and business analysis
-- **AI** — Debugging, query refinement, and technical writing support
+- **AI** — Debugging, and technical writing support
 - **GitHub** — Project documentation
 
 # Dataset
