@@ -453,7 +453,7 @@ concise, business-focused analyses. Learning to formulate meaningful business qu
 into actionable business insights required a different way of thinking. Developing executive-level insights was particularly demanding
 because it involved reviewing results across multiple analyses and identifying meaningful relationships between different business metrics rather than simply describing individual query outputs.
 
-Overall, this project has been one of the most rewarding milestines in my upskilling journey. It challenged both my technical and 
+Overall, this project has been one of the most rewarding milestones in my upskilling journey. It challenged both my technical and 
 analytical abilities while teaching me how to transform raw transactional data into business insights that support data-driven decision-making. Completing this project has strengthened my confidence as an aspiring data analyst, and I am grateful for the oppotunity to develop a skill that I have worked hard to build.
 
 # Feedback
