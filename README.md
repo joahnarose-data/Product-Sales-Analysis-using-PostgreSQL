@@ -3,7 +3,7 @@ This project analyzes a multi-channel retail sales dataset using PostgreSQL to g
 
 # Business Problem
 Retail businesses generate thousands of transactions across multiple products, sales channels, payment methods, countries, and
-logistics providers. While transactional data containcs valuable business information, organizations often struggle to transform raw 
+logistics providers. While transactional data contains valuable business information, organizations often struggle to transform raw 
 records into actionable insights.
 
 This project addresses that challenge by analyzing sales transactions to answer practical business questions such as:
