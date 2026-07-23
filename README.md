@@ -106,7 +106,7 @@ This project aims to:
 # Project Development Snapshot
 This project involved data cleaning, SQL query development, business analysis, and documentation over several months. The screenshot below shows part of my actual working environment while developing the project.
 
-<img src="images/project-development-snapshot.png" width="900">
+![Project Workspace](project_development_snapshot.png)
 
 # SQL Preview
 One of the analytical queries from this project combines multiple Common Table Expressions (CTEs), window functions, and ranking logic to evaluate warehouse performance across several business metrics.
